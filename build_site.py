@@ -49,7 +49,7 @@ CORPORA = [
         scope="Oregon · executive branch",
         archetype="document",
         status="Active",
-        mcp="https://mcp.morficflux.com/mcp",
+        mcp="https://oregonai.morficflux.com/executive-regulatory-frameworks/mcp",
         blurb="ORS statutes, OAR rules, executive orders, and agency policies, procedures, "
               "standards, and the Oregon Accounting Manual — with a mechanically-derived "
               "authority graph linking statute → rule → policy.",
@@ -60,7 +60,7 @@ CORPORA = [
         scope="Oregon · Secretary of State Archives",
         archetype="document",
         status="In progress",
-        mcp=None,
+        mcp="https://oregonai.morficflux.com/oregon-records-retention/mcp",
         blurb="Agency-specific (SPECIAL) records-retention schedules. The general schedules "
               "in OAR chapter 166 live in Executive Regulatory Frameworks and are "
               "referenced here, never copied.",
@@ -75,7 +75,7 @@ CORPORA = [
         # in that repo is the authority and says hybrid.
         archetype="hybrid",
         status="In progress",
-        mcp=None,
+        mcp="https://oregonai.morficflux.com/oregon-legislature/mcp",
         blurb="Mirrored measure metadata and bill text, with live status proxied from the "
               "Legislature's OData feed — the bill end of the bill → statute → rule chain.",
     ),
