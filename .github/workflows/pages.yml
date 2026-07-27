@@ -1,0 +1,43 @@
+name: pages
+
+# Build the organization landing page (build_site.py) and deploy ./site/ to GitHub Pages.
+# This repo is named <org>.github.io, so it serves at the org root: https://oregonai.github.io/
+on:
+  push:
+    branches: [main]
+  # The page reads each corpus's published corpus-index.json at build time, so it can go
+  # stale without anything changing HERE — a sibling corpus shipping its first index should
+  # show up without a commit to this repo. Rebuild weekly to pick that up.
+  schedule:
+    - cron: "17 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # stdlib only — urllib does the corpus probing. No requirements file on purpose.
+      - name: Build the site
+        run: python3 build_site.py
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

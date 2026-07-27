@@ -1,0 +1,8 @@
+# Generated at deploy time by build_site.py — never committed, so it cannot fall behind
+# the corpora it reports on.
+site/
+
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
