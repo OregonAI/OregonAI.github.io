@@ -69,7 +69,11 @@ CORPORA = [
         repo="oregon-legislature",
         name="Legislative Measures",
         scope="Oregon · legislature",
-        archetype="api",
+        # hybrid, not api. The seed spec called for a pure OData proxy; PHASE5-MCP-SPEC
+        # overrode that after measuring OData's substringof() miss 84 of 121 relevant
+        # bills, so measures are mirrored and only status is proxied. _meta/corpus.yml
+        # in that repo is the authority and says hybrid.
+        archetype="hybrid",
         status="In progress",
         mcp=None,
         blurb="Mirrored measure metadata and bill text, with live status proxied from the "
@@ -84,6 +88,17 @@ CORPORA = [
         mcp=None,
         blurb="Where the money authorized by statute actually goes — the dollars node of "
               "the graph. Not yet started.",
+    ),
+    dict(
+        repo="oregon-audits",
+        name="Audits",
+        scope="Oregon · Secretary of State Audits Division",
+        archetype="document",
+        status="Planned",
+        mcp=None,
+        blurb="Performance and financial audits of state agencies — the audit node of the "
+              "graph, and the only one that reports on whether the rest of the chain "
+              "actually worked. Not yet started.",
     ),
 ]
 
@@ -305,6 +320,9 @@ TEMPLATE = r"""<!doctype html>
   .chain .flow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14.5px;line-height:2;
     color:var(--ink);overflow-x:auto;white-space:nowrap;padding-bottom:6px}
   .chain .flow b{color:var(--accent-ink);font-weight:700}
+  /* revision is emergent from git, not a corpus — styled apart so the chain does not
+     read as eight bodies to build */
+  .chain .flow .emergent{color:var(--muted);font-weight:700;font-style:italic}
   code{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   ul.plain{margin:0;padding-left:20px;color:var(--muted);font-size:14.5px}
   ul.plain li{margin:7px 0}
@@ -349,13 +367,19 @@ TEMPLATE = r"""<!doctype html>
     <div class="chain">
       <div class="flow">
         <b>bill</b> → <b>statute</b> → <b>rule</b> → <b>policy</b> → <b>standard</b> →
-        <b>dollars</b> → <b>audit</b> → <b>revision</b>
+        <b>dollars</b> → <b>audit</b> → <span class="emergent">revision</span>
       </div>
       <p style="color:var(--muted);font-size:14.5px;margin:14px 0 0">
         Each corpus contributes nodes and edge types to one graph. Because every server
         implements the same <code>resolve_citation</code> contract, an agent can follow a
         citation out of one corpus and into another — from the bill that authorized a
         program to the rule that runs it. Corpora reference each other; they never copy.
+      </p>
+      <p style="color:var(--muted);font-size:13.5px;margin:12px 0 0">
+        Today <b>statute · rule · policy · standard</b> are populated; the rest belong to
+        corpora still being built. <span class="emergent">revision</span> is the exception
+        and will never be a corpus — every corpus is a git repository, so its revision
+        history already <em>is</em> the diff trail, with no separate body to ingest.
       </p>
     </div>
   </section>
