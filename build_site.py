@@ -141,6 +141,14 @@ def site_live(repo: str) -> bool:
     return _get(f"{PAGES}/{repo}/", "bytes=0-64") is not None
 
 
+def repo_live(repo: str) -> bool:
+    """Does the repository exist yet? A planned corpus may have no repo, and linking one
+    that 404s is worse than showing no link — so the link is earned, not assumed. Probed
+    rather than declared in the registry so the link appears by itself once the repo is
+    created."""
+    return _get(f"{ORG_URL}/{repo}", "bytes=0-64") is not None
+
+
 # ---------- rendering ----------
 
 def esc(s: str) -> str:
@@ -155,7 +163,11 @@ def build(offline: bool = False) -> str:
     live, notes = {}, []
     for c in CORPORA:
         if offline:
+            c["has_repo"] = True
             continue
+        c["has_repo"] = repo_live(c["repo"])
+        if not c["has_repo"]:
+            notes.append(f"  {c['repo']}: no repository yet — link suppressed")
         info = probe(c["repo"])
         if info:
             live[c["repo"]] = {**info, "site": site_live(c["repo"])}
@@ -193,9 +205,13 @@ def build(offline: bool = False) -> str:
             if info.get("contract_version"):
                 bits.append(f'contract v{info["contract_version"]}')
         bits.append(esc(c["archetype"]))
-        links = [f'<a href="{ORG_URL}/{c["repo"]}">Repository →</a>']
+        links = []
         if info and info.get("site"):
-            links.insert(0, f'<a href="{PAGES}/{c["repo"]}/">Explore the corpus →</a>')
+            links.append(f'<a href="{PAGES}/{c["repo"]}/">Explore the corpus →</a>')
+        if c.get("has_repo", True):
+            links.append(f'<a href="{ORG_URL}/{c["repo"]}">Repository →</a>')
+        else:
+            links.append('<span class="meta">Repository not created yet</span>')
         if c["mcp"]:
             links.append(f'<a href="{c["mcp"]}"><code>MCP</code> →</a>')
         cards.append(f'''<div class="card">
