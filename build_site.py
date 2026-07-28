@@ -84,10 +84,16 @@ CORPORA = [
         name="Budget & Expenditure",
         scope="Oregon · statewide",
         archetype="hybrid",
-        status="Planned",
+        status="In progress",
+        # DELIBERATELY None until the server is actually behind the tunnel. The corpus is
+        # built and its MCP server runs locally, but platform-deploy has no route for it
+        # yet, and publishing a URL that 404s is worse than publishing none — a reader
+        # cannot tell "not deployed" from "deployed and broken".
         mcp=None,
         blurb="Where the money authorized by statute actually goes — the dollars node of "
-              "the graph. Not yet started.",
+              "the graph. 544 agency-year expenditure summaries over a 668,906-row "
+              "mirror of state spending, plus appropriation line items extracted from "
+              "budget bills and referenced back to the Legislature corpus.",
     ),
     dict(
         repo="oregon-audits",
