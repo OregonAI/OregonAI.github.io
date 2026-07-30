@@ -96,11 +96,12 @@ CORPORA = [
         name="Audits",
         scope="Oregon · Secretary of State Audits Division",
         archetype="document",
-        status="Planned",
-        mcp=None,
-        blurb="Performance and financial audits of state agencies — the audit node of the "
+        status="In progress",
+        mcp="https://oregonai.morficflux.com/oregon-audits/mcp",
+        blurb="Secretary of State audit reports, 2020 to present — findings, "
+              "recommendations, and the audited agency's response. The audit node of the "
               "graph, and the only one that reports on whether the rest of the chain "
-              "actually worked. Not yet started.",
+              "actually worked: 71% of reports cite the statutes and rules they examined.",
     ),
 ]
 
