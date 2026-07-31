@@ -42,9 +42,17 @@ TIMEOUT = 20
 # The registry. `status` is the FALLBACK shown when a corpus publishes no index yet;
 # any corpus that does publish one is reported Active with its live count, whatever
 # this says. Keep descriptions honest about what is actually ingested.
+#
+# `group` decides which section a corpus renders under. It exists because federal-reference
+# is `jurisdiction: us` and every other corpus stops at the state border — dropping a federal
+# corpus into a list on a page titled "knowledge bases of Oregon government", with every
+# sibling labelled "Oregon · …", reads as a mistake rather than a deliberate boundary. The
+# grouping lives in the DATA rather than in a second list so the tiles keep counting every
+# corpus with no arithmetic of their own.
 CORPORA = [
     dict(
         repo="executive-regulatory-frameworks",
+        group="oregon",
         name="Executive Regulatory Frameworks",
         scope="Oregon · executive branch",
         archetype="document",
@@ -56,6 +64,7 @@ CORPORA = [
     ),
     dict(
         repo="oregon-records-retention",
+        group="oregon",
         name="Records Retention Schedules",
         scope="Oregon · Secretary of State Archives",
         archetype="document",
@@ -67,6 +76,7 @@ CORPORA = [
     ),
     dict(
         repo="oregon-legislature",
+        group="oregon",
         name="Legislative Measures",
         scope="Oregon · legislature",
         # hybrid, not api. The seed spec called for a pure OData proxy; PHASE5-MCP-SPEC
@@ -81,6 +91,7 @@ CORPORA = [
     ),
     dict(
         repo="oregon-budget",
+        group="oregon",
         name="Budget & Expenditure",
         scope="Oregon · statewide",
         archetype="hybrid",
@@ -93,6 +104,7 @@ CORPORA = [
     ),
     dict(
         repo="oregon-audits",
+        group="oregon",
         name="Audits",
         scope="Oregon · Secretary of State Audits Division",
         archetype="document",
@@ -102,6 +114,21 @@ CORPORA = [
               "recommendations, and the audited agency's response. The audit node of the "
               "graph, and the only one that reports on whether the rest of the chain "
               "actually worked: 71% of reports cite the statutes and rules they examined.",
+    ),
+    dict(
+        repo="federal-reference",
+        group="federal",
+        name="Federal Reference",
+        # The first non-Oregon scope on this page, and the reason `group` exists.
+        scope="United States · federal instruments",
+        archetype="document",
+        status="Active",
+        mcp="https://oregonai.morficflux.com/federal-reference/mcp",
+        blurb="The federal requirements Oregon agencies are audited against — 2 CFR 200 "
+              "(the Uniform Guidance), the CJIS Security Policy, IRS Publication 1075, "
+              "WIOA and Perkins V, plus the 38 sections of 2 CFR 200 Oregon actually "
+              "cites, each individually addressable. Where the authority chain goes when "
+              "it leaves the state.",
     ),
 ]
 
@@ -212,7 +239,11 @@ def build(offline: bool = False) -> str:
         f'<div class="tile"><div class="num">{v}</div><div class="lbl">{esc(l)}</div>'
         f'<div class="sub">{esc(s)}</div></div>' for v, l, s in tiles)
 
-    cards = []
+    # Cards are bucketed by `group` rather than emitted as one list, so a federal corpus does
+    # not appear unexplained among five labelled "Oregon · …". Unknown groups fall back to
+    # "oregon", so a new entry that forgets the key still renders somewhere visible instead of
+    # vanishing into a section that is never printed.
+    grouped: dict[str, list[str]] = {"oregon": [], "federal": []}
     for c in CORPORA:
         info = live.get(c["repo"])
         status = "Active" if info else c["status"]
@@ -232,7 +263,11 @@ def build(offline: bool = False) -> str:
             links.append('<span class="meta">Repository not created yet</span>')
         if c["mcp"]:
             links.append(f'<a href="{c["mcp"]}"><code>MCP</code> →</a>')
-        cards.append(f'''<div class="card">
+        group = c.get("group", "oregon")
+        if group not in grouped:      # unknown group -> visible, never silently dropped
+            group = "oregon"
+        grouped[group].append(
+            f'''<div class="card">
           <div class="chip {cls}">{esc(status)}</div>
           <h3>{esc(c["name"])}</h3>
           <div class="meta">{esc(c["scope"])}</div>
@@ -240,6 +275,20 @@ def build(offline: bool = False) -> str:
           <div class="meta mono">{" · ".join(bits)}</div>
           <div class="links">{" ".join(links)}</div>
         </div>''')
+
+    # The federal section renders ONLY when something is in it. An empty <section> with a
+    # heading and a justification for corpora that are not there would be worse than no
+    # section at all, and this file is the kind of thing that gets copied to a new platform.
+    federal_html = ""
+    if grouped["federal"]:
+        federal_html = f'''
+  <section>
+    <h2>Federal requirements Oregon answers to</h2>
+    <p class="lede">Oregon agencies are audited against federal rules, so the authority chain
+    does not stop at the state border. These corpora are not Oregon government — they are what
+    Oregon government must comply with.</p>
+    <div class="cards">{"".join(grouped["federal"])}</div>
+  </section>'''
 
     plat = "\n".join(
         f'''<div class="card">
@@ -254,7 +303,8 @@ def build(offline: bool = False) -> str:
     out = TEMPLATE
     for token, value in (
         ("<!--TILES-->", tile_html),
-        ("<!--CORPORA-->", "\n".join(cards)),
+        ("<!--CORPORA-->", "\n".join(grouped["oregon"])),
+        ("<!--FEDERAL-->", federal_html),
         ("<!--PLATFORM-->", plat),
         ("__ORG_URL__", ORG_URL),
         ("__BUILT__", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")),
@@ -359,6 +409,7 @@ TEMPLATE = r"""<!doctype html>
     <h2>Corpora</h2>
     <div class="cards"><!--CORPORA--></div>
   </section>
+<!--FEDERAL-->
 
   <section>
     <h2>Platform</h2>
@@ -370,7 +421,8 @@ TEMPLATE = r"""<!doctype html>
     <div class="chain">
       <div class="flow">
         <b>bill</b> → <b>statute</b> → <b>rule</b> → <b>policy</b> → <b>standard</b> →
-        <b>dollars</b> → <b>audit</b> → <span class="emergent">revision</span>
+        <b>dollars</b> → <b>audit</b> → <b>federal requirement</b> →
+        <span class="emergent">revision</span>
       </div>
       <p style="color:var(--muted);font-size:14.5px;margin:14px 0 0">
         Each corpus contributes nodes and edge types to one graph. Because every server
@@ -379,8 +431,11 @@ TEMPLATE = r"""<!doctype html>
         program to the rule that runs it. Corpora reference each other; they never copy.
       </p>
       <p style="color:var(--muted);font-size:13.5px;margin:12px 0 0">
-        Today <b>statute · rule · policy · standard</b> are populated; the rest belong to
-        corpora still being built. <span class="emergent">revision</span> is the exception
+        Every node except <span class="emergent">revision</span> is now
+          populated by a live corpus. <b>federal requirement</b> is the newest and the
+          only one outside Oregon: an audit finds an agency out of compliance with
+          2 CFR 200.303, and that citation now resolves to the text it was measured
+          against instead of stopping at the state border. <span class="emergent">revision</span> is the exception
         and will never be a corpus — every corpus is a git repository, so its revision
         history already <em>is</em> the diff trail, with no separate body to ingest.
       </p>
