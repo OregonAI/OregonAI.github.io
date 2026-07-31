@@ -230,8 +230,15 @@ def build(offline: bool = False) -> str:
     tiles = [
         (commas(total_docs) if live else "—", "documents",
          "mirrored verbatim with provenance, across every active corpus"),
+        # NO "of N planned". CORPORA is a roster of what exists, not a roadmap — it has
+        # never encoded a plan — so once every entry is live the denominator necessarily
+        # reads "6 of 6" and the page announces a finished platform on its most prominent
+        # element. The sub-label now describes what is counted, and names the shortfall only
+        # when there is one, which is a fact the registry can actually support.
         (str(n_active) if not offline else "—", "corpora live",
-         f"of {len(CORPORA)} planned, each its own repository and MCP server"),
+         "each its own repository and MCP server"
+         + ("" if offline or n_active >= len(CORPORA) else
+            f" — {len(CORPORA) - n_active} more registered, not yet serving")),
         ("1", "interface contract",
          "every corpus server answers the same tool signatures"),
     ]
@@ -262,7 +269,15 @@ def build(offline: bool = False) -> str:
         else:
             links.append('<span class="meta">Repository not created yet</span>')
         if c["mcp"]:
-            links.append(f'<a href="{c["mcp"]}"><code>MCP</code> →</a>')
+            # NOT an <a href>. An MCP endpoint answers POST with specific Accept headers;
+            # a browser navigation gets HTTP 400. Rendering it as an ordinary link meant
+            # clicking it looked broken to a human — and the person clicking is exactly the
+            # person deciding whether this platform works. It is a value to copy into a
+            # client's config, so it is presented as one.
+            links.append(
+                f'<button class="endpoint" type="button" data-endpoint="{esc(c["mcp"])}" '
+                f'title="Copy this endpoint into an MCP client — it does not open in a '
+                f'browser"><code>MCP</code> {esc(c["mcp"])}</button>')
         group = c.get("group", "oregon")
         if group not in grouped:      # unknown group -> visible, never silently dropped
             group = "oregon"
@@ -382,6 +397,13 @@ TEMPLATE = r"""<!doctype html>
   footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--muted);font-size:13.5px}
   footer p{margin:6px 0}
   #theme{position:fixed;top:14px;right:14px;width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;box-shadow:var(--shadow);font-size:16px;z-index:5}
+  /* Deliberately NOT styled as a link: this endpoint answers POST, not navigation, and a
+     browser hitting it gets HTTP 400. It reads as a value to copy, because that is what
+     it is. */
+  .endpoint{display:inline-flex;align-items:center;gap:7px;max-width:100%;border:1px dashed var(--line);background:var(--bg);color:var(--muted);border-radius:8px;padding:3px 9px;font:inherit;font-size:12.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;cursor:copy;text-align:left;overflow-wrap:anywhere}
+  .endpoint:hover{border-style:solid;color:var(--ink)}
+  .endpoint code{background:transparent;border:0;padding:0;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);flex:none}
+  .endpoint.copied{border-style:solid;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -476,6 +498,24 @@ TEMPLATE = r"""<!doctype html>
     var next=cur==='dark'?'light':'dark';
     r.setAttribute('data-theme',next);
     try{localStorage.setItem('theme',next);}catch(e){}
+  });
+})();
+(function(){
+  /* Copy-to-clipboard for MCP endpoints. The value is already visible as text, so a
+     browser without clipboard access loses nothing but the convenience — select and
+     copy still works. */
+  document.querySelectorAll('.endpoint').forEach(function(el){
+    el.addEventListener('click',function(){
+      var v=el.getAttribute('data-endpoint');
+      var done=function(){
+        var code=el.querySelector('code'), was=code.textContent;
+        el.classList.add('copied'); code.textContent='COPIED';
+        setTimeout(function(){el.classList.remove('copied');code.textContent=was;},1400);
+      };
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(v).then(done,function(){});
+      }
+    });
   });
 })();
 </script>
