@@ -58,21 +58,10 @@ CORPORA = [
         archetype="document",
         status="Active",
         mcp="https://oregonai.morficflux.com/executive-regulatory-frameworks/mcp",
-        blurb="ORS statutes, OAR rules, executive orders, and agency policies, procedures, "
-              "standards, and the Oregon Accounting Manual — with a mechanically-derived "
-              "authority graph linking statute → rule → policy.",
-    ),
-    dict(
-        repo="oregon-records-retention",
-        group="oregon",
-        name="Records Retention Schedules",
-        scope="Oregon · Secretary of State Archives",
-        archetype="document",
-        status="In progress",
-        mcp="https://oregonai.morficflux.com/oregon-records-retention/mcp",
-        blurb="Agency-specific (SPECIAL) records-retention schedules. The general schedules "
-              "in OAR chapter 166 live in Executive Regulatory Frameworks and are "
-              "referenced here, never copied.",
+        blurb="ORS statutes, OAR rules, executive orders, agency policies, procedures, "
+              "standards, the Oregon Accounting Manual, and the Secretary of State "
+              "Archives Division's special records-retention schedules — with a "
+              "mechanically-derived authority graph linking statute → rule → policy.",
     ),
     dict(
         repo="oregon-legislature",
