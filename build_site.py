@@ -116,6 +116,20 @@ CORPORA = [
               "actually worked: 71% of reports cite the statutes and rules they examined.",
     ),
     dict(
+        repo="oregon-kpm",
+        group="oregon",
+        name="Key Performance Measures",
+        scope="Oregon · Legislative Fiscal Office",
+        archetype="document",
+        status="Active",
+        mcp="https://oregonai.morficflux.com/oregon-kpm/mcp",
+        blurb="Annual Performance Progress Reports, 2016 to 2025 — the targets and actuals "
+              "every agency reports to the Legislature, with the year-on-year series "
+              "derived across 785 reports. The outcome side of Budget: that corpus answers "
+              "what was appropriated and spent, this one what the agency then claimed it "
+              "achieved. Every number is the agency's own account of itself.",
+    ),
+    dict(
         repo="federal-reference",
         group="federal",
         name="Federal Reference",
