@@ -130,6 +130,24 @@ CORPORA = [
               "achieved. Every number is the agency's own account of itself.",
     ),
     dict(
+        repo="oregon-counties",
+        group="oregon",
+        name="County Code, Ordinances & Policy",
+        # The only scope on this page BELOW the state. Every other Oregon corpus here holds
+        # what the state published; this one holds what 36 separate governments did, each on
+        # its own platform and its own schedule.
+        scope="Oregon · county government",
+        archetype="document",
+        status="In progress",
+        mcp="https://oregonai.morficflux.com/oregon-counties/mcp",
+        blurb="County code, ordinances, board orders and administrative policy for 27 of "
+              "Oregon's 36 counties — 90% of the state's population. The bottom of the "
+              "authority chain, and the end that actually reaches people: land use, "
+              "procurement, public records. 9,703 citations point up into Executive "
+              "Regulatory Frameworks, and 98% of them resolve — to the statute, or to "
+              "where it was renumbered, or to a recorded reason there is no text.",
+    ),
+    dict(
         repo="federal-reference",
         group="federal",
         name="Federal Reference",
