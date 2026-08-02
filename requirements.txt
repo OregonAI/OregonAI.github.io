@@ -1,0 +1,2 @@
+# build_chain.py imports the shared viz chrome; everything else stays stdlib.
+corpus-toolkit @ git+https://github.com/OregonAI/corpus-toolkit@v1.20.0

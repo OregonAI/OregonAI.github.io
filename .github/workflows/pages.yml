@@ -33,6 +33,11 @@ jobs:
         with:
           python-version: "3.12"
       # stdlib only — urllib does the corpus probing. No requirements file on purpose.
+      - run: pip install -r requirements.txt
+      # The chain page fetches from four published artifacts; a failed fetch fails the
+      # build here exactly as build_site.py's probes do below (issue #1's rule).
+      - name: Build the chain (issue #6)
+        run: python3 build_chain.py
       - name: Build the site
         run: python3 build_site.py
       - uses: actions/configure-pages@v5
