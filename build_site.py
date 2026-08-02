@@ -154,6 +154,10 @@ CORPORA = [
 ]
 
 PLATFORM = [
+    dict(repo="oregon-stories", name="oregon-stories",
+         blurb="Data stories built from the corpora: static, cited to the exact source "
+               "artifacts, caveats on every page. Where the platform's numbers become "
+               "narratives — non-authoritative throughout."),
     dict(repo="corpus-toolkit", name="corpus-toolkit",
          blurb="The versioned core: frontmatter schemas, provenance and citation validators, "
                "reusable CI workflows, and the MCP server framework every corpus speaks "
