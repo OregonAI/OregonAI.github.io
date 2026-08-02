@@ -73,7 +73,7 @@ CORPORA = [
         # bills, so measures are mirrored and only status is proxied. _meta/corpus.yml
         # in that repo is the authority and says hybrid.
         archetype="hybrid",
-        status="In progress",
+        status="Active",
         mcp="https://oregonai.morficflux.com/oregon-legislature/mcp",
         blurb="Mirrored measure metadata and bill text, with live status proxied from the "
               "Legislature's OData feed — the bill end of the bill → statute → rule chain.",
@@ -84,7 +84,7 @@ CORPORA = [
         name="Budget & Expenditure",
         scope="Oregon · statewide",
         archetype="hybrid",
-        status="In progress",
+        status="Active",
         mcp="https://oregonai.morficflux.com/oregon-budget/mcp",
         blurb="Where the money authorized by statute actually goes — the dollars node of "
               "the graph. 544 agency-year expenditure summaries over a 668,906-row "
@@ -97,7 +97,7 @@ CORPORA = [
         name="Audits",
         scope="Oregon · Secretary of State Audits Division",
         archetype="document",
-        status="In progress",
+        status="Active",
         mcp="https://oregonai.morficflux.com/oregon-audits/mcp",
         blurb="Secretary of State audit reports, 2020 to present — findings, "
               "recommendations, and the audited agency's response. The audit node of the "
@@ -127,7 +127,7 @@ CORPORA = [
         # its own platform and its own schedule.
         scope="Oregon · county government",
         archetype="document",
-        status="In progress",
+        status="Active",
         mcp="https://oregonai.morficflux.com/oregon-counties/mcp",
         blurb="County code, ordinances, board orders and administrative policy for 27 of "
               "Oregon's 36 counties — 90% of the state's population. The bottom of the "
@@ -166,6 +166,16 @@ PLATFORM = [
 
 # ---------- live corpus probing ----------
 
+class ProbeError(RuntimeError):
+    """A fetch failed for a reason OTHER than 404.
+
+    404 means "this corpus publishes no index yet" — a benign, renderable state, and the
+    only failure that may collapse to None. Everything else (DNS, timeout, reset, 5xx)
+    means the probe could not check, and "could not check" must never render as "not yet
+    serving": an unattended weekly cron would replace a good page with one claiming the
+    platform is smaller than it is, build green (issue #1)."""
+
+
 def _get(url: str, byte_range: str | None = None) -> bytes | None:
     req = urllib.request.Request(url, headers={"User-Agent": f"{ORG}-site-builder"})
     if byte_range:
@@ -173,8 +183,12 @@ def _get(url: str, byte_range: str | None = None) -> bytes | None:
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
             return r.read()
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError):
-        return None
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None
+        raise ProbeError(f"{url}: HTTP {e.code}") from e
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        raise ProbeError(f"{url}: {e}") from e
 
 
 def probe(repo: str) -> dict | None:
@@ -204,7 +218,10 @@ def probe(repo: str) -> dict | None:
 
 
 def site_live(repo: str) -> bool:
-    return _get(f"{PAGES}/{repo}/", "bytes=0-64") is not None
+    try:
+        return _get(f"{PAGES}/{repo}/", "bytes=0-64") is not None
+    except ProbeError:
+        return False   # cosmetic: suppresses a link, never fakes a count
 
 
 def repo_live(repo: str) -> bool:
@@ -212,7 +229,10 @@ def repo_live(repo: str) -> bool:
     that 404s is worse than showing no link — so the link is earned, not assumed. Probed
     rather than declared in the registry so the link appears by itself once the repo is
     created."""
-    return _get(f"{ORG_URL}/{repo}", "bytes=0-64") is not None
+    try:
+        return _get(f"{ORG_URL}/{repo}", "bytes=0-64") is not None
+    except ProbeError:
+        return False   # cosmetic: suppresses a link, never fakes a count
 
 
 # ---------- rendering ----------
@@ -226,7 +246,7 @@ def commas(n) -> str:
 
 
 def build(offline: bool = False) -> str:
-    live, notes = {}, []
+    live, notes, failures = {}, [], []
     for c in CORPORA:
         if offline:
             c["has_repo"] = True
@@ -234,13 +254,26 @@ def build(offline: bool = False) -> str:
         c["has_repo"] = repo_live(c["repo"])
         if not c["has_repo"]:
             notes.append(f"  {c['repo']}: no repository yet — link suppressed")
-        info = probe(c["repo"])
+        try:
+            info = probe(c["repo"])
+        except ProbeError as e:
+            failures.append(f"{c['repo']}: {e}")
+            continue
         if info:
             live[c["repo"]] = {**info, "site": site_live(c["repo"])}
             notes.append(f"  {c['repo']}: live, {info['n_documents']:,} documents")
         else:
-            notes.append(f"  {c['repo']}: no published index — rendering as "
+            notes.append(f"  {c['repo']}: no published index (404) — rendering as "
                          f"'{c['status']}' with no counts")
+    if failures:
+        # Refuse to render. A page built from partial probes understates the platform
+        # and looks intentional; the previous page stays live on Pages, which is the
+        # correct behaviour while the probe (or the network) is broken.
+        raise ProbeError(
+            "refusing to build: could not probe "
+            + ", ".join(failures)
+            + " — a 404 (no index published) renders fine; an unreachable index must "
+              "not render as 'not yet serving'")
     print("corpus probe:" if not offline else "corpus probe: skipped (--offline)")
     for n in notes:
         print(n)
@@ -552,10 +585,17 @@ def main():
                     help="skip network probes; render from the registry only")
     args = ap.parse_args()
     SITE.mkdir(exist_ok=True)
-    html = build(args.offline)
+    try:
+        html = build(args.offline)
+    except ProbeError as e:
+        # Nonzero exit halts pages.yml before upload-pages-artifact: the previously
+        # published page stays live, and the run is red instead of quietly smaller.
+        print(f"BUILD FAILED: {e}", file=sys.stderr)
+        return 1
     (SITE / "index.html").write_text(html, encoding="utf-8")
     (SITE / ".nojekyll").write_text("", encoding="utf-8")
     print(f"wrote {SITE / 'index.html'} ({len(html):,} bytes)")
+    return 0
 
 
 if __name__ == "__main__":
