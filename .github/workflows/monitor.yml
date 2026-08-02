@@ -1,0 +1,67 @@
+# The platform's only end-to-end check: POST a real JSON-RPC initialize through the
+# public URL of every route and assert the right corpus answers. Container healthchecks
+# see servers from inside the host; the landing page reports build-time facts; neither
+# notices a wedged tunnel. This does.
+#
+# Signal discipline: one labelled issue, opened when something fails and CLOSED by the
+# next green run — never an issue per failure. A red scheduled run also emails the repo
+# owner (GitHub's default), so the issue is the durable record and the email is the page.
+name: monitor
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Probe every route
+        id: probe
+        run: |
+          set +e
+          python3 monitor.py 2> failures.txt
+          echo "rc=$?" >> "$GITHUB_OUTPUT"
+          cat failures.txt >&2
+          exit 0
+      - name: Open or update the monitor issue on failure
+        if: steps.probe.outputs.rc != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BODY="Synthetic monitor failures at $(date -u +%Y-%m-%dT%H:%M:%SZ) (run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}):
+
+          \`\`\`
+          $(cat failures.txt)
+          \`\`\`"
+          N=$(gh issue list --label synthetic-monitor --state open --json number -q '.[0].number')
+          if [ -n "$N" ]; then
+            gh issue comment "$N" --body "$BODY"
+          else
+            gh label create synthetic-monitor --color B60205 --description "opened by monitor.yml" 2>/dev/null || true
+            gh issue create --title "Synthetic monitor: one or more MCP routes are failing" \
+              --label synthetic-monitor --body "$BODY"
+          fi
+      - name: Close the monitor issue on recovery
+        if: steps.probe.outputs.rc == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          N=$(gh issue list --label synthetic-monitor --state open --json number -q '.[0].number')
+          [ -n "$N" ] && gh issue close "$N" --comment "All routes healthy again at $(date -u +%Y-%m-%dT%H:%M:%SZ). Closed by monitor.yml." || true
+      - name: Fail the run if probes failed
+        if: steps.probe.outputs.rc != '0'
+        run: exit 1
