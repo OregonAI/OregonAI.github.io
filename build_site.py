@@ -154,10 +154,17 @@ CORPORA = [
 ]
 
 PLATFORM = [
+    # THE GALLERY LINK IS THE POINT of this card. oregon-stories is the single home
+    # for every visual on the platform (operator decision 2026-08-02): its manifest-
+    # generated gallery indexes each one, including charts still rendering on corpus
+    # pages. 13 stories and ~90 agency profiles were published and reachable from
+    # NOTHING before this link existed.
     dict(repo="oregon-stories", name="oregon-stories",
-         blurb="Data stories built from the corpora: static, cited to the exact source "
-               "artifacts, caveats on every page. Where the platform's numbers become "
-               "narratives — non-authoritative throughout."),
+         site="https://oregonai.github.io/oregon-stories/",
+         site_label="Explore the stories →",
+         blurb="Every visual on the platform, one gallery: data stories and charts, "
+               "static, cited to the exact source artifacts, caveats on every page. "
+               "Non-authoritative throughout."),
     dict(repo="corpus-toolkit", name="corpus-toolkit",
          blurb="The versioned core: frontmatter schemas, provenance and citation validators, "
                "reusable CI workflows, and the MCP server framework every corpus speaks "
@@ -367,7 +374,7 @@ def build(offline: bool = False) -> str:
         f'''<div class="card">
           <h3><code>{esc(p["name"])}</code></h3>
           <p>{esc(p["blurb"])}</p>
-          <div class="links"><a href="{ORG_URL}/{p["repo"]}">Repository →</a></div>
+          <div class="links">{f'<a href="{p["site"]}">{esc(p["site_label"])}</a> · ' if p.get("site") else ""}<a href="{ORG_URL}/{p["repo"]}">Repository →</a></div>
         </div>''' for p in PLATFORM)
 
     # Sentinel replacement rather than str.format: the template is mostly CSS and JS, both
