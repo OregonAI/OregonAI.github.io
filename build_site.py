@@ -137,6 +137,26 @@ CORPORA = [
               "where it was renumbered, or to a recorded reason there is no text.",
     ),
     dict(
+        repo="oregon-collective-bargaining",
+        # The THIRD group, and the seed records why (corpus-seeds/oregon-collective-
+        # bargaining.md): a CBA is a negotiated contract, not law — it implements
+        # nothing, sits outside the authority chain, and rendering it among the
+        # Oregon-law corpora would misstate what it is. Like `federal`, the group
+        # exists because of a real boundary; here the boundary is instrument family,
+        # not jurisdiction.
+        group="agreements",
+        name="Collective Bargaining — State & County Labor Agreements",
+        scope="Oregon · negotiated agreements",
+        archetype="document",
+        status="In progress",
+        mcp="",
+        blurb="The contracts that govern Oregon's public workforce: the state's 35 DAS "
+              "agreements across 12 unions, plus the counties that publish theirs — "
+              "summary-first (terms, expiry, official links; never the contract's "
+              "text), with expired-vs-current always stated and supersedes chains "
+              "linking each term to its successor.",
+    ),
+    dict(
         repo="federal-reference",
         group="federal",
         name="Federal Reference",
@@ -315,7 +335,7 @@ def build(offline: bool = False) -> str:
     # not appear unexplained among five labelled "Oregon · …". Unknown groups fall back to
     # "oregon", so a new entry that forgets the key still renders somewhere visible instead of
     # vanishing into a section that is never printed.
-    grouped: dict[str, list[str]] = {"oregon": [], "federal": []}
+    grouped: dict[str, list[str]] = {"oregon": [], "federal": [], "agreements": []}
     for c in CORPORA:
         info = live.get(c["repo"])
         status = "Active" if info else c["status"]
@@ -370,6 +390,18 @@ def build(offline: bool = False) -> str:
     <div class="cards">{"".join(grouped["federal"])}</div>
   </section>'''
 
+    agreements_html = ""
+    if grouped["agreements"]:
+        agreements_html = f'''
+  <section>
+    <h2>Negotiated agreements</h2>
+    <p class="lede">Contracts, not law. A collective bargaining agreement is jointly authored
+    with private parties and implements nothing — it binds employers and their workforces by
+    negotiation. These corpora sit deliberately outside the authority chain and join the
+    platform through employers instead.</p>
+    <div class="cards">{"".join(grouped["agreements"])}</div>
+  </section>'''
+
     plat = "\n".join(
         f'''<div class="card">
           <h3><code>{esc(p["name"])}</code></h3>
@@ -385,6 +417,7 @@ def build(offline: bool = False) -> str:
         ("<!--TILES-->", tile_html),
         ("<!--CORPORA-->", "\n".join(grouped["oregon"])),
         ("<!--FEDERAL-->", federal_html),
+        ("<!--AGREEMENTS-->", agreements_html),
         ("<!--PLATFORM-->", plat),
         ("__ORG_URL__", ORG_URL),
         ("__BUILT__", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")),
@@ -497,6 +530,7 @@ TEMPLATE = r"""<!doctype html>
     <div class="cards"><!--CORPORA--></div>
   </section>
 <!--FEDERAL-->
+<!--AGREEMENTS-->
 
   <section>
     <h2>Platform</h2>
