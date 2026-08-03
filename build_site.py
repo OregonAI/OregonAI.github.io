@@ -148,8 +148,8 @@ CORPORA = [
         name="Collective Bargaining — State & County Labor Agreements",
         scope="Oregon · negotiated agreements",
         archetype="document",
-        status="In progress",
-        mcp="",
+        status="In progress",   # the live-index fetch flips this to Active
+        mcp="https://oregonai.morficflux.com/oregon-collective-bargaining/mcp",
         blurb="The contracts that govern Oregon's public workforce: the state's 35 DAS "
               "agreements across 12 unions, plus the counties that publish theirs — "
               "summary-first (terms, expiry, official links; never the contract's "
