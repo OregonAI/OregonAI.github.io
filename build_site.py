@@ -173,6 +173,24 @@ CORPORA = [
     ),
 ]
 
+# ONE ENDPOINT IN FRONT OF ALL OF THEM. Not a corpus and deliberately not in CORPORA: it
+# holds no documents, publishes no corpus-index.json, and must never be counted in the tiles.
+# It is an access layer, and it is listed here because it is now the recommended way in —
+# eight tools instead of the 56 a client sees when it wires up every corpus separately.
+#
+# NO REPOSITORY LINK. corpus-gateway is private (it documents host topology and tunnel
+# identity, like platform-deploy), and a "Repository →" that 404s for every visitor is worse
+# than no link. The endpoint itself is public; the implementation is not.
+GATEWAY = dict(
+    name="One endpoint for everything",
+    mcp="https://gateway.morficflux.com/mcp",
+    blurb="An aggregating MCP gateway in front of every corpus below. Search all of them at "
+          "once and get one merged, provenance-stamped result set; resolve a citation without "
+          "knowing which corpus holds it. Every response names which corpora answered and "
+          "which did not — a partial answer is never presented as a complete one.",
+)
+
+
 PLATFORM = [
     # THE GALLERY LINK IS THE POINT of this card. oregon-stories is the single home
     # for every visual on the platform (operator decision 2026-08-02): its manifest-
@@ -267,6 +285,46 @@ def repo_live(repo: str) -> bool:
 
 
 # ---------- rendering ----------
+
+def gateway_live() -> bool:
+    """Is the gateway actually answering MCP right now?
+
+    A REAL JSON-RPC initialize, not a GET. The gateway publishes no corpus-index.json, so
+    `probe()` cannot see it, and a GET to an MCP endpoint answers 406 whether the service is
+    healthy or wedged — checking that would assert nothing.
+
+    Failure returns False and the section still renders, deliberately: this is the same rule
+    that governs every other probe here (issue #1). Not being able to check must never
+    silently remove the endpoint from the page — it only withholds the claim that it is live.
+    """
+    body = json.dumps({
+        "jsonrpc": "2.0", "id": 1, "method": "initialize",
+        "params": {"protocolVersion": "2025-03-26", "capabilities": {},
+                   "clientInfo": {"name": "oregonai-site-build", "version": "1"}},
+    }).encode()
+    req = urllib.request.Request(
+        GATEWAY["mcp"], data=body,
+        headers={"Content-Type": "application/json",
+                 "Accept": "application/json, text/event-stream",
+                 "User-Agent": "oregonai-site-build"})
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+            if r.status != 200:
+                return False
+            text = r.read().decode("utf-8", "replace")
+    except Exception:                                          # noqa: BLE001
+        return False
+    # SSE or plain JSON; both are valid streamable-HTTP answers.
+    for line in text.splitlines():
+        if line.startswith("data:"):
+            text = line[5:].strip()
+            break
+    try:
+        name = ((json.loads(text).get("result") or {}).get("serverInfo") or {}).get("name", "")
+    except json.JSONDecodeError:
+        return False
+    return "gateway" in name
+
 
 def esc(s: str) -> str:
     return (s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
@@ -411,14 +469,30 @@ def build(offline: bool = False) -> str:
 
     # Sentinel replacement rather than str.format: the template is mostly CSS and JS, both
     # of which are full of braces that .format() would try to interpret as fields.
+    live = False if offline else gateway_live()
+    gateway_html = (
+        '<div class="gateway">'
+        f'<div class="gwhead"><h2>{esc(GATEWAY["name"])}</h2>'
+        + ('<span class="pill live">Live</span>' if live else '')
+        + '</div>'
+        f'<p>{esc(GATEWAY["blurb"])}</p>'
+        f'<button class="endpoint" type="button" data-endpoint="{esc(GATEWAY["mcp"])}" '
+        f'title="Copy this endpoint into an MCP client — it does not open in a browser">'
+        f'<code>MCP</code>{esc(GATEWAY["mcp"])}</button>'
+        '<div class="links"><a href="use.html">How to connect it to Claude →</a></div>'
+        '</div>'
+    )
+
     # Same approach as a corpus's build_topic_map.py.
     out = TEMPLATE
     for token, value in (
         ("<!--TILES-->", tile_html),
+        ("<!--GATEWAY-->", gateway_html),
         ("<!--CORPORA-->", "\n".join(grouped["oregon"])),
         ("<!--FEDERAL-->", federal_html),
         ("<!--AGREEMENTS-->", agreements_html),
         ("<!--PLATFORM-->", plat),
+        ("__STYLE__", STYLE),
         ("__ORG_URL__", ORG_URL),
         ("__BUILT__", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")),
         ("__YEAR__", str(date.today().year)),
@@ -427,14 +501,7 @@ def build(offline: bool = False) -> str:
     return out
 
 
-TEMPLATE = r"""<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OregonAI — public, agent-readable knowledge bases of Oregon government</title>
-<meta name="description" content="The Civic Corpus Platform: public, non-authoritative, machine-readable knowledge bases of Oregon government rules, processes, and data — one repository per corpus, one MCP interface contract.">
-<style>
+STYLE = r"""
   :root{
     --bg:#f6f7f9; --panel:#ffffff; --ink:#161a20; --muted:#5a6472; --line:#e4e8ee;
     --accent:#1f6feb; --accent-ink:#0b4bc0; --gold:#8a6d1f;
@@ -500,9 +567,25 @@ TEMPLATE = r"""<!doctype html>
      it is. */
   .endpoint{display:inline-flex;align-items:center;gap:7px;max-width:100%;border:1px dashed var(--line);background:var(--bg);color:var(--muted);border-radius:8px;padding:3px 9px;font:inherit;font-size:12.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;cursor:copy;text-align:left;overflow-wrap:anywhere}
   .endpoint:hover{border-style:solid;color:var(--ink)}
+  .gateway{border:1px solid var(--line);border-radius:12px;padding:18px 20px;background:var(--panel)}
+  .gateway h2{margin:0}
+  .gateway p{margin:10px 0 14px;max-width:64ch}
+  .gwhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .pill.live{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:2px 9px;color:var(--muted)}
+  .gateway .links{margin-top:12px}
   .endpoint code{background:transparent;border:0;padding:0;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);flex:none}
   .endpoint.copied{border-style:solid;color:var(--ink)}
-</style>
+"""
+
+
+TEMPLATE = r"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OregonAI — public, agent-readable knowledge bases of Oregon government</title>
+<meta name="description" content="The Civic Corpus Platform: public, non-authoritative, machine-readable knowledge bases of Oregon government rules, processes, and data — one repository per corpus, one MCP interface contract.">
+<style>__STYLE__</style>
 </head>
 <body>
 <button id="theme" title="Toggle light/dark" aria-label="Toggle theme">◑</button>
@@ -517,12 +600,17 @@ TEMPLATE = r"""<!doctype html>
     <div class="cta">
       <a class="btn primary" href="__ORG_URL__">Browse the organization →</a>
       <a class="btn" href="__ORG_URL__/corpus-toolkit">The toolkit</a>
+      <a class="btn" href="use.html">How to use it →</a>
       <a class="btn" href="__ORG_URL__/corpus-template">Start a corpus</a>
     </div>
   </header>
 
   <section>
     <div class="grid"><!--TILES--></div>
+  </section>
+
+  <section>
+    <!--GATEWAY-->
   </section>
 
   <section>
