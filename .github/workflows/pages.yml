@@ -35,7 +35,12 @@ jobs:
       # stdlib only — urllib does the corpus probing. No requirements file on purpose.
       - run: pip install -r requirements.txt
       - name: Build the site
-        run: python3 build_site.py
+        run: |
+          python3 build_site.py
+          # Separate builder, same ./site/ output. Runs after build_site.py because
+          # it imports STYLE and GATEWAY from it — one definition of the palette and
+          # one of the endpoint, shared by both pages.
+          python3 build_usage.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

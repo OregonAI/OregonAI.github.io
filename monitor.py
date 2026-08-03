@@ -36,7 +36,17 @@ ROUTES = {
     "oregon-kpm": "oregon-kpm",
     "oregon-counties": "oregon-counties",
     "federal-reference": "federal-reference",
+    "oregon-collective-bargaining": "oregon-collective-bargaining",
     "oregon-records-retention": "oregon-records-retention",
+}
+
+# NOT under BASE, so it cannot live in ROUTES: the aggregating gateway is its own hostname
+# and its own tunnel, deliberately separate so that a fault in it cannot take the corpora
+# with it. It needs watching for exactly the same reason the corpora do — it is the endpoint
+# the landing page now tells people to use, and a wedged tunnel there is invisible from
+# every container healthcheck on the host.
+EXTRA = {
+    "gateway": ("https://gateway.morficflux.com/mcp", "oregonai-gateway"),
 }
 
 INIT = {
@@ -58,9 +68,16 @@ def body_json(raw: bytes, content_type: str) -> dict:
     return json.loads(text)
 
 
-def check(route: str, expect: str) -> str | None:
+def targets() -> dict[str, tuple[str, str]]:
+    """label -> (url, expected serverInfo.name). Corpora are path-routed under one host;
+    the gateway is a host of its own."""
+    out = {r: (f"{BASE}/{r}/mcp", e) for r, e in ROUTES.items()}
+    out.update(EXTRA)
+    return out
+
+
+def check(label: str, url: str, expect: str) -> str | None:
     """None if healthy, else a one-line failure description."""
-    url = f"{BASE}/{route}/mcp"
     req = urllib.request.Request(
         url, data=json.dumps(INIT).encode(),
         headers={"Content-Type": "application/json",
@@ -69,33 +86,34 @@ def check(route: str, expect: str) -> str | None:
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
             if r.status != 200:
-                return f"{route}: HTTP {r.status}"
+                return f"{label}: HTTP {r.status}"
             d = body_json(r.read(), r.headers.get("Content-Type", ""))
     except urllib.error.HTTPError as e:
-        return f"{route}: HTTP {e.code}"
+        return f"{label}: HTTP {e.code}"
     except (urllib.error.URLError, TimeoutError, OSError, ValueError,
             json.JSONDecodeError) as e:
-        return f"{route}: {e}"
+        return f"{label}: {e}"
     name = ((d.get("result") or {}).get("serverInfo") or {}).get("name", "")
     if expect not in name:
         # The wrong corpus answering the path is WORSE than no answer — it means routing
         # is crossed, and every citation the caller resolves lands in the wrong corpus.
-        return f"{route}: answered as {name!r}, expected it to contain {expect!r}"
+        return f"{label}: answered as {name!r}, expected it to contain {expect!r}"
     return None
 
 
 def main() -> int:
-    failures = [f for route, expect in ROUTES.items()
-                if (f := check(route, expect))]
-    for route in ROUTES:
-        if not any(f.startswith(route + ":") for f in failures):
-            print(f"  ok  {route}")
+    checks = targets()
+    failures = [f for label, (url, expect) in checks.items()
+                if (f := check(label, url, expect))]
+    for label in checks:
+        if not any(f.startswith(label + ":") for f in failures):
+            print(f"  ok  {label}")
     if failures:
         print("\nFAILING:", file=sys.stderr)
         for f in failures:
             print(f"  {f}", file=sys.stderr)
         return 1
-    print(f"all {len(ROUTES)} routes healthy")
+    print(f"all {len(checks)} endpoints healthy")
     return 0
 
 
