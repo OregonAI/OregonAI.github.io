@@ -546,7 +546,7 @@ TEMPLATE = r"""<!doctype html>
         <span class="emergent">revision</span>
       </div>
       <p style="margin:12px 0 0;font-size:14.5px">
-        <a href="chain.html">See this chain drawn on one real program — PERS, statute to
+        <a href="https://oregonai.github.io/oregon-stories/one-thread-pers.html">See this chain told on one real program — PERS, statute to
         audit, every count derived from the live corpora.</a></p>
       <p style="color:var(--muted);font-size:14.5px;margin:14px 0 0">
         Each corpus contributes nodes and edge types to one graph. Because every server
