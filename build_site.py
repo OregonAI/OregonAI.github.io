@@ -37,6 +37,9 @@ SITE = Path(__file__).resolve().parent / "site"
 ORG = "OregonAI"
 ORG_URL = f"https://github.com/{ORG}"
 PAGES = "https://oregonai.github.io"
+# The visuals gallery. oregon-stories is the single home for every visual on the
+# platform (operator decision 2026-08-02), so this is the one place its URL is written.
+STORIES_URL = "https://oregonai.github.io/oregon-stories/"
 TIMEOUT = 20
 
 # The registry. `status` is the FALLBACK shown when a corpus publishes no index yet;
@@ -198,7 +201,7 @@ PLATFORM = [
     # pages. 13 stories and ~90 agency profiles were published and reachable from
     # NOTHING before this link existed.
     dict(repo="oregon-stories", name="oregon-stories",
-         site="https://oregonai.github.io/oregon-stories/",
+         site=STORIES_URL,
          site_label="Explore the stories →",
          blurb="Every visual on the platform, one gallery: data stories and charts, "
                "static, cited to the exact source artifacts, caveats on every page. "
@@ -493,6 +496,7 @@ def build(offline: bool = False) -> str:
         ("<!--AGREEMENTS-->", agreements_html),
         ("<!--PLATFORM-->", plat),
         ("__STYLE__", STYLE),
+        ("__STORIES_URL__", STORIES_URL),
         ("__ORG_URL__", ORG_URL),
         ("__BUILT__", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")),
         ("__YEAR__", str(date.today().year)),
@@ -601,6 +605,7 @@ TEMPLATE = r"""<!doctype html>
       <a class="btn primary" href="__ORG_URL__">Browse the organization →</a>
       <a class="btn" href="__ORG_URL__/corpus-toolkit">The toolkit</a>
       <a class="btn" href="use.html">How to use it →</a>
+      <a class="btn" href="__STORIES_URL__">Browse visuals →</a>
       <a class="btn" href="__ORG_URL__/corpus-template">Start a corpus</a>
     </div>
   </header>
