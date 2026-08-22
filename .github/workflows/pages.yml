@@ -32,8 +32,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # stdlib only — urllib does the corpus probing. No requirements file on purpose.
-      - run: pip install -r requirements.txt
+      # STDLIB ONLY — urllib does the corpus probing, and there is no requirements file
+      # on purpose. There WAS one: a `corpus-toolkit` pin that existed solely for
+      # `build_chain.py`, which was deleted in ad5370e when chain.html was retired. The
+      # pin outlived its only caller by long enough to freeze nine toolkit versions
+      # behind, invisible to `propagate-pin` because this repo is not in its matrix,
+      # while every Pages build cloned and built the toolkit from git for nothing.
+      # If a build step ever needs a dependency again, add this repo to that matrix in
+      # the same change — otherwise the new pin inherits exactly the same fate.
       - name: Build the site
         run: |
           python3 build_site.py
