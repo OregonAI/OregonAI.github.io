@@ -16,7 +16,8 @@ name: links
 # The class this guards: build_site.py renders cards from live probes of sibling
 # corpora, so a renamed or retired repo produces a broken link with no diff here to
 # review. A PR check catches a bad hand-written link; the weekly run catches a
-# sibling that moved without any commit to this repo.
+# sibling that moved without any commit to this repo. It catches a dead repo or page
+# link, not Pages build-mode problems (the legacy Jekyll builder); site/.nojekyll covers those.
 on:
   pull_request:
   push:

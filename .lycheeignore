@@ -1,0 +1,8 @@
+# One regex per line, a reason above each. Never widen --accept instead.
+#
+# MCP endpoints (gateway.morficflux.com/mcp and oregonai.morficflux.com/<corpus>/mcp).
+# An MCP endpoint answers POST JSON-RPC only, so a GET returns HTTP 400 by protocol while
+# the endpoint is working. build_site.py renders these as <button class="endpoint"> text,
+# not <a href>, but lychee still extracts the bare URL from the text. The endpoints are
+# checked by the build's own probes (gateway_live() and the per-corpus mcp probes).
+^https://(gateway|oregonai)\.morficflux\.com/.*mcp$

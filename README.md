@@ -53,7 +53,13 @@ visitor sees in its markdown. The links worth checking are rendered from live pr
 sibling corpora, so a renamed or retired repo breaks a card with no diff here.
 
 A host that refuses scripted fetches goes in `.lycheeignore` with a comment giving the
-reason, never into a wider `--accept`. None is needed today.
+reason, never into a wider `--accept`. One is needed today: the nine `morficflux.com` MCP
+endpoint URLs (`gateway.morficflux.com/mcp` and `oregonai.morficflux.com/<corpus>/mcp`),
+which answer POST JSON-RPC only, so a GET returns HTTP 400 by protocol. The build's own
+probes check those endpoints.
+
+The job catches a dead repo or page link, not Pages build-mode problems (the legacy Jekyll
+builder); `site/.nojekyll` covers those.
 
 ---
 
