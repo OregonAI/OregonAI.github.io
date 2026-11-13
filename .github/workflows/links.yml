@@ -1,0 +1,68 @@
+name: links
+
+# Link-check the BUILT site, not the repo's source files (issue #2).
+#
+# WHY THIS IS NOT `OregonAI/corpus-toolkit/.github/workflows/check-links.yml@v1`, which
+# every corpus repo calls. That workflow (a) scans './**/*.md' and llms.txt -- source
+# files, and this repo's only markdown is README.md/AGENTS.md; every link a visitor
+# sees lives in the generated site/index.html and site/use.html -- and (b) ends by
+# running `corpus-validate-frontmatter --config _meta/corpus.yml`, which fails here
+# because this repo is not a corpus and has no _meta/. It cannot check built output, so
+# calling it would be a green check over the wrong files. Instead this job builds the
+# site exactly as pages.yml does and runs the SAME link engine the toolkit uses, with
+# the same pin form (a moving major tag on lycheeverse/lychee-action, which is what
+# check-links.yml itself pins) and the same accepted codes and retry settings.
+#
+# The class this guards: build_site.py renders cards from live probes of sibling
+# corpora, so a renamed or retired repo produces a broken link with no diff here to
+# review. A PR check catches a bad hand-written link; the weekly run catches a
+# sibling that moved without any commit to this repo. It catches a dead repo or page
+# link, not Pages build-mode problems (the legacy Jekyll builder); site/.nojekyll covers those.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "43 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Same two commands, same order, as pages.yml. build_usage.py imports from
+      # build_site.py, so the order matters.
+      - name: Build the site
+        run: |
+          python3 build_site.py
+          python3 build_usage.py
+      # A build that wrote nothing would make lychee pass over an empty directory.
+      - name: Built output must exist
+        run: test -s site/index.html && test -s site/use.html
+      # Hosts that refuse scripted fetches go in .lycheeignore, one regex per line with
+      # a comment giving the reason (lychee-action reads it from the repo root). Do NOT
+      # widen --accept to hide one: that weakens the check for every link. It holds one
+      # pattern, kept as a guard: the nine morficflux.com MCP endpoint URLs, which answer
+      # POST only (a GET is HTTP 400 by protocol). On the first run (2026-11-13, lychee
+      # v0.24.2) 30 links were checked and none excluded, so lychee did not read them.
+      - name: Links in the built site
+        uses: lycheeverse/lychee-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          fail: true
+          args: >-
+            --no-progress
+            --accept 200,203,206,429
+            --max-retries 3
+            --retry-wait-time 2
+            --root-dir ${{ github.workspace }}/site
+            'site/**/*.html'

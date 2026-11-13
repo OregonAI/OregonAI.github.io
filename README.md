@@ -43,6 +43,26 @@ Stdlib only — no dependencies to install.
 `site/` is generated and gitignored; it is built in CI on every push to `main`, weekly
 (so a sibling corpus going live appears without a commit here), and on manual dispatch.
 
+## Link checking
+
+`.github/workflows/links.yml` builds the site the way `pages.yml` does and runs lychee over
+the **built** `site/*.html` on every PR, every push to `main`, and weekly. It does not call
+the toolkit's reusable `check-links.yml`: that workflow scans source `*.md` and `llms.txt`
+and then validates `_meta/corpus.yml`, and this repo has neither a corpus nor any link a
+visitor sees in its markdown. The links worth checking are rendered from live probes of
+sibling corpora, so a renamed or retired repo breaks a card with no diff here.
+
+A host that refuses scripted fetches goes in `.lycheeignore` with a comment giving the
+reason, never into a wider `--accept`. It holds one pattern, kept as a guard: the nine
+`morficflux.com` MCP endpoint URLs (`gateway.morficflux.com/mcp` and
+`oregonai.morficflux.com/<corpus>/mcp`), which answer POST JSON-RPC only, so a GET returns
+HTTP 400 by protocol. The pages print them as button text, not links, and on the job's
+first run (2026-11-13, lychee v0.24.2) lychee checked 30 links and excluded none, so it did
+not read them as links. The build's own probes check those endpoints.
+
+The job catches a dead repo or page link, not Pages build-mode problems (the legacy Jekyll
+builder); `site/.nojekyll` covers those.
+
 ---
 
 Unofficial and non-authoritative. Not affiliated with the State of Oregon. Every document
