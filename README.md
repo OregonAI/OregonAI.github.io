@@ -43,6 +43,18 @@ Stdlib only — no dependencies to install.
 `site/` is generated and gitignored; it is built in CI on every push to `main`, weekly
 (so a sibling corpus going live appears without a commit here), and on manual dispatch.
 
+## Link checking
+
+`.github/workflows/links.yml` builds the site the way `pages.yml` does and runs lychee over
+the **built** `site/*.html` on every PR, every push to `main`, and weekly. It does not call
+the toolkit's reusable `check-links.yml`: that workflow scans source `*.md` and `llms.txt`
+and then validates `_meta/corpus.yml`, and this repo has neither a corpus nor any link a
+visitor sees in its markdown. The links worth checking are rendered from live probes of
+sibling corpora, so a renamed or retired repo breaks a card with no diff here.
+
+A host that refuses scripted fetches goes in `.lycheeignore` with a comment giving the
+reason, never into a wider `--accept`. None is needed today.
+
 ---
 
 Unofficial and non-authoritative. Not affiliated with the State of Oregon. Every document
