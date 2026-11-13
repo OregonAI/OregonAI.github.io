@@ -3,6 +3,8 @@
 # MCP endpoints (gateway.morficflux.com/mcp and oregonai.morficflux.com/<corpus>/mcp).
 # An MCP endpoint answers POST JSON-RPC only, so a GET returns HTTP 400 by protocol while
 # the endpoint is working. build_site.py renders these as <button class="endpoint"> text,
-# not <a href>, but lychee still extracts the bare URL from the text. The endpoints are
-# checked by the build's own probes (gateway_live() and the per-corpus mcp probes).
+# not <a href>. On the first CI run (2026-11-13, lychee v0.24.2) lychee checked 30 links
+# and excluded 0, so it did not extract them; this pattern is a guard in case a later
+# lychee or a markup change does. The endpoints are checked by the build's own probes
+# (gateway_live() and the per-corpus mcp probes).
 ^https://(gateway|oregonai)\.morficflux\.com/.*mcp$

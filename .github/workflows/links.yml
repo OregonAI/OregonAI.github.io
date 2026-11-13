@@ -49,9 +49,10 @@ jobs:
         run: test -s site/index.html && test -s site/use.html
       # Hosts that refuse scripted fetches go in .lycheeignore, one regex per line with
       # a comment giving the reason (lychee-action reads it from the repo root). Do NOT
-      # widen --accept to hide one: that weakens the check for every link. Today one
-      # pattern is excluded: the nine morficflux.com MCP endpoint URLs, which answer POST
-      # only (a GET is HTTP 400 by protocol); see .lycheeignore for the reason.
+      # widen --accept to hide one: that weakens the check for every link. It holds one
+      # pattern, kept as a guard: the nine morficflux.com MCP endpoint URLs, which answer
+      # POST only (a GET is HTTP 400 by protocol). On the first run (2026-11-13, lychee
+      # v0.24.2) 30 links were checked and none excluded, so lychee did not read them.
       - name: Links in the built site
         uses: lycheeverse/lychee-action@v2
         env:
